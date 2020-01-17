@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="piano_style.css">
+        <title>Piano Keyboard</title>
+
+        <script src="jquery.min.js"></script>
+        <script src="verovio-toolkit-light.js" type="text/javascript" ></script>
+        <script src="piano.js"></script>
+        <script src = "socket.io.js"></script>
+
+
+        <script type="text/javascript">
+
+
+var keynote = [",,4C", ",,b4D", ",,4D", ",,b4E", ",,4E", ",,4F", ",,b4G",",,4G",",,b4A",",,4A",",,b4B",",,4B",
+",4C", ",b4D", ",4D", ",b4E", ",4E", ",4F", ",b4G",",4G",",b4A",",4A",",b4B",",4B",
+"'4C", "'b4D", "'4D", "'b4E", "'4E", "'4F", "'b4G","'4G","'b4A","'4A","'b4B","'4B",
+"''4C", "''b4D", "''4D", "''b4E", "''4E", "''4F", "''b4G","''4G","''b4A","''4A","''b4B","''4B",
+"'''4C", "'''b4D", "'''4D", "'''b4E", "'''4E", "'''4F", "'''b4G","'''4G","'''b4A","'''4A","'''b4B","'''4B"]
+
+var prevalue = "";
+var prenum = 0;
+            $( document ).ready(function() {
+                //create piano with 3 octaves, starting at C4 (lowest key)
+                //shows labels and octave shift buttons
+                var keyboardHTML = htmlForKeyboardWithOctaves(3, octaves.C4, true, true)
+                //render the keyboard in the div
+                $("#keyboardContainer").html(keyboardHTML)
+                //when keys are pressed updatePreview() is called
+                bindKeysToFunction(updatePreviewWithNote)
+                //when the clef is changed updatePreviewWithClef() is called
+                bindClefSelectionToFunction(updatePreviewWithClef)
+                //set the default clef to G4
+                setSelectedClef(clefs.G4)
+
+                $("#backspaceButton").click(deleteLast)
+            })
+
+            //this stores all keyboard input
+            var plaineEasieCodes = []
+            var plaineEasieCodes2 = []
+            var selectedClef = clefs.G4
+
+            //this is called whenever a piano key is pressed
+            function updatePreviewWithNote(sender, paeNote) {
+                console.log("key pressed is " + paeNote + "sender" + plaineEasieCodes)
+                plaineEasieCodes.push(paeNote)
+                updateNotesSVG()
+            }
+
+            //this is called when the user changes the clef for display
+            function updatePreviewWithClef(sender, clef) {
+                console.log("clef changed to " + clef)
+                selectedClef = clef
+                updateNotesSVG()
+            }
+
+            //delete last input
+            function deleteLast() {
+                plaineEasieCodes.pop()
+                updateNotesSVG()
+            }
+
+            function updateNotesSVG() {
+                //render the notes to an SVG using the Verovio tookit
+                //width of the svg is 800px and note scaling 50%
+                var notesSVG = svgNotesForPlaineEasieCode(plaineEasieCodes.join(""), selectedClef, 800, 50)
+                var notesSVG2 = svgNotesForPlaineEasieCode(plaineEasieCodes2.join(""), selectedClef, 800, 50)
+
+                //insert thes SVG code in our div
+                var svgContainerDiv = $('#svgNotesContainer')
+                svgContainerDiv.html(notesSVG)
+                
+                var svgContainerDiv2 = $('#svgNotesContainer2')
+                svgContainerDiv2.html(notesSVG2)
+
+            }
+
+            var socket = io();
+            socket.on('testerEvent2', function(data){
+                $("#nodedisplay").text(data);
+                plaineEasieCodes2.push(data);
+                if (plaineEasieCodes2.length > 8){
+                    plaineEasieCodes2.shift();
+                }
+            });
+            socket.on('testerEvent', function(data){
+                console.log(data);
+                var keystest2 = $(".DA-PianoKeyboard li").eq(0);
+                var subvalue = 0;
+                if (keystest2.text() == "C2"){
+                    subvalue = 0;
+                }else if (keystest2.text() == "C3") {
+                    subvalue = -12;
+                }else if (keystest2.text() == "C4") {
+                    subvalue = -24;
+                }else if (keystest2.text() == "C5") {
+                    subvalue = -36;
+                }else if (keystest2.text() == "C6") {
+                    subvalue = -48;
+                }else if (keystest2.text() == "C7") {
+                    subvalue = -60;
+                }
+                else {
+                    subvalue = 0;
+                }
+
+                console.log('keystest2', keystest2.text(), keynote.indexOf(data), subvalue, (keynote.indexOf(data) + subvalue), prevalue)
+                // if(prevalue != ""){
+                //     $(".DA-PianoKeyboard li").eq(prenum).css("background-color",prevalue);
+                // }
+                // if((keynote.indexOf(data) + subvalue) >=0 && (keynote.indexOf(data) + subvalue) <=36 ){
+                //     prenum = (keynote.indexOf(data) + subvalue)
+                //     prevalue = $(".DA-PianoKeyboard li").eq(keynote.indexOf(data) + subvalue).css("background-color",prevalue);
+                //     var keystest = $(".DA-PianoKeyboard li").eq((keynote.indexOf(data) + subvalue));
+                //     keystest.css("background-color", "yellow");
+                // }
+                plaineEasieCodes.push(data);
+                if (plaineEasieCodes.length > 8){
+                    plaineEasieCodes.shift();
+                }
+                        updateNotesSVG();
+                        $('g:not([class])').remove();
+            });
+
+        </script>
+
+
+    </head>
+<body>
+    <div id="keyboardContainer"></div><!-- this will hold the keyboard -->
+    <div id="nodedisplay"></div>
+    <div id="svgNotesContainer2" ></div>
+    <div id="svgNotesContainer" ></div><!-- this will hold the SVG with rendered notes -->
+
+    <button id="backspaceButton">Delete</button>
+</body>
+</html>
